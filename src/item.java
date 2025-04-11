@@ -3,7 +3,7 @@
 
 public class item {
 
-    public static class newitems
+    public static class Items
 
     {
         public final float cost;
@@ -15,16 +15,21 @@ public class item {
         // Constructor
         //@ requires costofitem > 0; 
         //@ requires nameofitem!=null;
+        //@ requires idofitem>=0 && idofitem<Integer.MAX_VALUE;
         //@ requires costofitem<Float.MAX_VALUE;
         //@ ensures costofitem == cost && idofitem == id && itemCount==0;
         //@ ensures costofitem<Float.MAX_VALUE && costofitem>0;
+        //@ ensures id>=0 && id<Integer.MAX_VALUE;
         //@ pure
-    public newitems( float costofitem, int idofitem, /*@ non_null @*/ String nameofitem){
+    public Items(float costofitem, int idofitem, /*@ non_null @*/ String nameofitem){
         if (nameofitem == null) {
             throw new IllegalArgumentException("Name cannot be null");
         }
         if (costofitem <= 0 || costofitem >= Float.MAX_VALUE) {
             throw new IllegalArgumentException("Invalid cost");
+        }
+        if(idofitem<0||idofitem>=Integer.MAX_VALUE){
+            throw new IllegalArgumentException("Invalid ID");
         }
         this.cost = costofitem;
         this.id = idofitem;
@@ -55,6 +60,9 @@ public class item {
         //@ assigns itemCount;
         //@ ensures itemCount == \old(itemCount)-1;
         public void removeItemCount() {
+            if (itemCount==0) {
+                throw new IllegalStateException("Cannot decriment would lead to underflow");
+            }
             --itemCount;
         }
         //@ assigns itemCount;
@@ -89,30 +97,37 @@ public class item {
     //@ requires item != null;
     //@ requires item.cost > 0;
     //@ requires totalItemCount > 0;
+    //@ requires item.getItemCount()>0;
     //@ requires item.cost < Float.MAX_VALUE;
     //@ requires 0 <= totalCost - item.cost;
-    //@ assigns totalItemCount, totalCost;
+    //@ assigns totalItemCount, totalCost,item.itemCount;
     //@ ensures totalItemCount == \old(totalItemCount) - 1;
+    //@ ensures item.itemCount==\old(item.itemCount)-1;
     //@ ensures \old(totalCost) == totalCost + item.cost;
-    public static void removeItemCostToTotalCost(newitems item){
+    public static void removeItemCostToTotalCost(Items item){
         if(totalCost-item.cost<0||item.cost>=Float.MAX_VALUE||item.cost<=0||totalItemCount<=0){
-            return;
+            throw new IllegalStateException("bad invocation");
         }
-
+        if(item.getItemCount()<=0){
+            throw new IllegalStateException("Cant have negative count");
+        }
+        item.removeItemCount();
         --totalItemCount;
         totalCost-=item.cost;
     }
 
     //@ requires item != null;
     //@ requires item.cost > 0;
+    //@ requires item.itemCount<Integer.MAX_VALUE;
     //@ requires item.cost < Float.MAX_VALUE;
     //@ requires totalCost < Float.MAX_VALUE - item.cost;
     //@ requires totalItemCount <= Integer.MAX_VALUE - 1;
-    //@ assigns totalItemCount, totalCost;
+    //@ assigns totalItemCount, totalCost,item.itemCount;
     //@ ensures totalItemCount == \old(totalItemCount) + 1;
     //@ ensures totalCost == \old(totalCost) + item.cost;
+    //@ ensures item.itemCount== \old(item.itemCount)+1;
     //@ ensures item!=null;
-    public static void addItem(newitems item) {
+    public static void addItem(Items item) {
 
         if (item == null) {
             throw new IllegalArgumentException("Item cannot be null.");
@@ -126,50 +141,53 @@ public class item {
         if (totalItemCount == Integer.MAX_VALUE) {
             throw new IllegalStateException("Too many items.");
         }
-
+        if(item.getItemCount()==Integer.MAX_VALUE){
+            throw new IllegalStateException("Overflow");
+        }
+        item.addItemCount();
         totalCost+=item.cost;
         totalItemCount++;
 
     }
 
     //@ assignable System.out.outputText, System.out.endsInNewLine;
-    public static void printItem(String[] names,newitems[] itemList){
+    public static void printItem(String[] names, Items[] ShoppingCart){
         System.out.println("\nYour Receipt:");
-        if(names.length!=itemList.length){
+        if(names.length!=ShoppingCart.length){
             throw new IllegalStateException("EVIL");
         }
-        for(int i=0;i<itemList.length;i++){
+        for(int i=0;i<ShoppingCart.length;i++){
             if(i<0){
                 throw new IllegalStateException("not valid");
             }
-            if(itemList[i]==null){
+            if(ShoppingCart[i]==null){
                 throw new IllegalStateException("EVIL");
             }
-            if(itemList[i].getItemCount()==0){
+            if(ShoppingCart[i].getItemCount()==0){
                 continue;
             }
-            System.out.println("\tName: "+names[i]+", Cost: "+itemList[i].cost + ", Quantity: "+ itemList[i].getItemCount());
+            System.out.println("\tName: "+names[i]+", Cost: "+ShoppingCart[i].cost + ", Quantity: "+ ShoppingCart[i].getItemCount());
         }
         System.out.println("\nTotal:\n\tTotal Cost: $"+totalCost+ "\n\tItems In Cart: "+ totalItemCount+"\n");
     }
-    //@ requires choice>=0 && choice<itemList.length;
-    //@ requires itemList != null;
-    //@ ensures itemList[choice] != null;
-    //@ ensures itemList[choice].cost > 0;
-    //@ ensures itemList[choice].cost < Float.MAX_VALUE;
-    //@ ensures itemList[choice].getItemCount() > 0;
-    //@ ensures 0 <= totalCost - itemList[choice].cost;
+    //@ requires choice>=0 && choice<ShoppingCart.length;
+    //@ requires ShoppingCart != null;
+    //@ ensures ShoppingCart[choice] != null;
+    //@ ensures ShoppingCart[choice].cost > 0;
+    //@ ensures ShoppingCart[choice].cost < Float.MAX_VALUE;
+    //@ ensures ShoppingCart[choice].getItemCount() > 0;
+    //@ ensures 0 <= totalCost - ShoppingCart[choice].cost;
     //@ ensures \result == true;
     //@ assigns \nothing;
-    public static boolean removeItemComplete(newitems[] itemList,int choice){
+    public static boolean removeItemComplete(Items[] ShoppingCart, int choice){
         if(totalItemCount<=0){
             throw new IllegalStateException("Cant Have negative item count");
         }
-        if (itemList.length > Integer.MAX_VALUE) {
+        if (ShoppingCart.length > Integer.MAX_VALUE) {
             throw new IllegalStateException("not valid");
         }
 
-        if (choice >= itemList.length) {
+        if (choice >= ShoppingCart.length) {
             throw new IllegalStateException("not valid");
 
         }
@@ -177,46 +195,46 @@ public class item {
         if (choice < 0) {
             throw new IllegalStateException("not valid");
         }
-        if(totalCost-itemList[choice].cost<0||itemList[choice].cost>=Float.MAX_VALUE||itemList[choice].cost<=0){
+        if(totalCost-ShoppingCart[choice].cost<0||ShoppingCart[choice].cost>=Float.MAX_VALUE||ShoppingCart[choice].cost<=0){
             throw new IllegalStateException("Not Valid Cost.");
         }
-        if(itemList[choice].getItemCount()<=0){
+        if(ShoppingCart[choice].getItemCount()<=0){
             throw new IllegalStateException("Cant have negative count");
         }
 
 
-        if (itemList[choice] == null) {
+        if (ShoppingCart[choice] == null) {
             throw new IllegalArgumentException("Item cannot be null.");
         }
-        if (itemList[choice].name == null) {
+        if (ShoppingCart[choice].name == null) {
             throw new IllegalArgumentException("Item cannot be null.");
         }
-        // @ assume itemList[choice]!= null;
-        // @ assume choice< itemList.length;
-        // @ assume  itemList[choice].cost>0 && itemList[choice].cost<Float.MAX_VALUE;
+        // @ assume ShoppingCart[choice]!= null;
+        // @ assume choice< ShoppingCart.length;
+        // @ assume  ShoppingCart[choice].cost>0 && ShoppingCart[choice].cost<Float.MAX_VALUE;
         // @ assume choice > -1;
-        // @ assume totalCost < Float.MAX_VALUE - itemList[choice].cost;
+        // @ assume totalCost < Float.MAX_VALUE - ShoppingCart[choice].cost;
         // @ assume totalItemCount <= Integer.MAX_VALUE-1;
         return true;
     }
 
-    //@ requires choice>=0 && choice<itemList.length;
-    //@ requires itemList != null;
-    //@ ensures itemList[choice] != null;
-    //@ ensures itemList[choice].cost > 0;
-    //@ ensures itemList[choice].cost < Float.MAX_VALUE;
-    //@ ensures totalCost < Float.MAX_VALUE - itemList[choice].cost;
-    //@ ensures itemList[choice].getItemCount()<=Integer.MAX_VALUE-1;
+    //@ requires choice>=0 && choice<ShoppingCart.length;
+    //@ requires ShoppingCart != null;
+    //@ ensures ShoppingCart[choice] != null;
+    //@ ensures ShoppingCart[choice].cost > 0;
+    //@ ensures ShoppingCart[choice].cost < Float.MAX_VALUE;
+    //@ ensures totalCost < Float.MAX_VALUE - ShoppingCart[choice].cost;
+    //@ ensures ShoppingCart[choice].getItemCount()<=Integer.MAX_VALUE-1;
     //@ ensures totalItemCount <= Integer.MAX_VALUE - 1;
     //@ ensures \result ==true;
     //@ assigns \nothing;
-    public static boolean addItemComplete(newitems[] itemList,int choice) {
+    public static boolean addItemComplete(Items[] ShoppingCart, int choice) {
 
-        if (itemList.length > Integer.MAX_VALUE) {
+        if (ShoppingCart.length > Integer.MAX_VALUE) {
             throw new IllegalStateException("not valid");
         }
 
-        if (choice >= itemList.length) {
+        if (choice >= ShoppingCart.length) {
             throw new IllegalStateException("not valid");
 
         }
@@ -225,29 +243,29 @@ public class item {
                 throw new IllegalStateException("not valid");
             }
 
-            //@ assume itemList[choice] != null;
-            if (itemList[choice].cost <= 0 || itemList[choice].cost >= Float.MAX_VALUE) {
+            //@ assume ShoppingCart[choice] != null;
+            if (ShoppingCart[choice].cost <= 0 || ShoppingCart[choice].cost >= Float.MAX_VALUE) {
                 throw new IllegalStateException("Not Valid Cost.");
             }
-            if (totalCost >= Float.MAX_VALUE - itemList[choice].cost) {
+            if (totalCost >= Float.MAX_VALUE - ShoppingCart[choice].cost) {
                 throw new IllegalStateException("Total cost would exceed Float.MAX_VALUE.");
             }
             if (totalItemCount == Integer.MAX_VALUE) {
                 throw new IllegalStateException("Too many items.");
             }
-            if (itemList[choice] == null) {
+            if (ShoppingCart[choice] == null) {
                 throw new IllegalArgumentException("Item cannot be null.");
             }
-            if (itemList[choice].name == null) {
+            if (ShoppingCart[choice].name == null) {
                 throw new IllegalArgumentException("Item cannot be null.");
             }
-            // @ assume itemList[choice]!= null;
-            // @ assume choice< itemList.length;
-            // @ assume  itemList[choice].cost>0 && itemList[choice].cost<Float.MAX_VALUE;
+            // @ assume ShoppingCart[choice]!= null;
+            // @ assume choice< ShoppingCart.length;
+            // @ assume  ShoppingCart[choice].cost>0 && ShoppingCart[choice].cost<Float.MAX_VALUE;
             // @ assume choice > -1;
-            // @ assume totalCost < Float.MAX_VALUE - itemList[choice].cost;
+            // @ assume totalCost < Float.MAX_VALUE - ShoppingCart[choice].cost;
             // @ assume totalItemCount <= Integer.MAX_VALUE-1;
-            if (itemList[choice].getItemCount() == Integer.MAX_VALUE) {
+            if (ShoppingCart[choice].getItemCount() == Integer.MAX_VALUE) {
                 throw new IllegalStateException("Too many items.");
             }
             return true;
@@ -266,22 +284,24 @@ public class item {
         /*@ non_null @*/String name4="Mango";
         /*@ non_null @*/String name5="Watermelon";
         /*@ non_null @*/ final String[] names= {name1,name2,name3,name4,name5};
-        /*@ non_null @*/final newitems apple= new newitems(10,0,name1);
-        /*@ non_null @*/final newitems grape= new newitems(90,1,name2);
-        /*@ non_null @*/final newitems pear= new newitems(10.50f,2,name3);
-        /*@ non_null @*/final newitems mango= new newitems(100,3,name4);
-        /*@ non_null @*/final newitems watermelon= new newitems(15,4,name5);
-        /*@ non_null @*/final newitems  [] itemList= {apple,grape,pear,mango,watermelon};
-        if(addItemComplete(itemList,0)) {
-            addItem(itemList[0]);
-            itemList[0].addItemCount();
+        /*@ non_null @*/final Items apple= new Items(10,0,name1);
+        /*@ non_null @*/final Items grape= new Items(90,1,name2);
+        /*@ non_null @*/final Items pear= new Items(10.50f,2,name3);
+        /*@ non_null @*/final Items mango= new Items(100,3,name4);
+        /*@ non_null @*/final Items watermelon= new Items(15,4,name5);
+        /*@ non_null @*/final Items[] ShoppingCart= {apple,grape,pear,mango,watermelon};
+        if(addItemComplete(ShoppingCart,0)) {
+            addItem(ShoppingCart[0]);
         }
-        if(removeItemComplete(itemList,0)){
-            removeItemCostToTotalCost(itemList[0]);
-            itemList[0].removeItemCount();
+
+        if(removeItemComplete(ShoppingCart,0)){
+            removeItemCostToTotalCost(ShoppingCart[0]);
         }
-        printItem(names,itemList);
-      // printItem(names,itemList);
+        if(removeItemComplete(ShoppingCart,0)){
+            removeItemCostToTotalCost(ShoppingCart[0]);
+        }
+        printItem(names,ShoppingCart);
+      // printItem(names,ShoppingCart);
 
 /*
             System.out.println("Welcome to the Shopping Cart Please Select What Action You Would Like To Do:\n \t0: Add Item\n \t1: Remove Item\n \t2: Checkout\n \tElse: Leave" );
@@ -289,22 +309,22 @@ public class item {
             options = scan.nextInt();
 
             if (options == 0) {
-                if(itemList.length!=names.length){
+                if(ShoppingCart.length!=names.length){
                     throw new IllegalStateException("not valid");
                 }
-                if(itemList.length>Integer.MAX_VALUE){
+                if(ShoppingCart.length>Integer.MAX_VALUE){
                     throw new IllegalStateException("not valid");
                 }
                 System.out.println("Select Option by ID");
-                //@ assume itemList.length==names.length;
-                for(int i=0;i<itemList.length;i++){
+                //@ assume ShoppingCart.length==names.length;
+                for(int i=0;i<ShoppingCart.length;i++){
                     if(i<0){
                         throw new IllegalStateException("not valid");
                     }
-                    System.out.println("ID: "+itemList[i].id+ ", Name: "+names[i]+", Cost: "+itemList[i].cost);
+                    System.out.println("ID: "+ShoppingCart[i].id+ ", Name: "+names[i]+", Cost: "+ShoppingCart[i].cost);
                 }
                     choice = scan.nextInt();
-                    if (choice >=itemList.length) {
+                    if (choice >=ShoppingCart.length) {
                         System.out.println("Not a valid item option");
 
                     } else {
@@ -313,67 +333,67 @@ public class item {
                             throw new IllegalStateException("not valid");
                         }
 
-                        //@ assume itemList[choice] != null;
-                        if (itemList[choice].cost <= 0 || itemList[choice].cost >= Float.MAX_VALUE) {
+                        //@ assume ShoppingCart[choice] != null;
+                        if (ShoppingCart[choice].cost <= 0 || ShoppingCart[choice].cost >= Float.MAX_VALUE) {
                             throw new IllegalStateException("Not Valid Cost.");
                         }
-                        if (totalCost >= Float.MAX_VALUE - itemList[choice].cost) {
+                        if (totalCost >= Float.MAX_VALUE - ShoppingCart[choice].cost) {
                             throw new IllegalStateException("Total cost would exceed Float.MAX_VALUE.");
                         }
                         if (totalItemCount == Integer.MAX_VALUE) {
                             throw new IllegalStateException("Too many items.");
                         }
-                        if (itemList[choice] == null) {
+                        if (ShoppingCart[choice] == null) {
                             throw new IllegalArgumentException("Item cannot be null.");
                         }
-                        if(itemList[choice].name==null){
+                        if(ShoppingCart[choice].name==null){
 
                         }
-                        // @ assume itemList[choice]!= null;
-                        // @ assume choice< itemList.length;
-                        // @ assume  itemList[choice].cost>0 && itemList[choice].cost<Float.MAX_VALUE;
+                        // @ assume ShoppingCart[choice]!= null;
+                        // @ assume choice< ShoppingCart.length;
+                        // @ assume  ShoppingCart[choice].cost>0 && ShoppingCart[choice].cost<Float.MAX_VALUE;
                         // @ assume choice > -1;
-                        // @ assume totalCost < Float.MAX_VALUE - itemList[choice].cost;
+                        // @ assume totalCost < Float.MAX_VALUE - ShoppingCart[choice].cost;
                         // @ assume totalItemCount <= Integer.MAX_VALUE-1;
-                        if(itemList[choice].getItemCount()==Integer.MAX_VALUE){
+                        if(ShoppingCart[choice].getItemCount()==Integer.MAX_VALUE){
                             throw new IllegalStateException("Too many items.");
                         }
-                        addItem(itemList[choice]);
-                        itemList[choice].addItemCount();
+                        addItem(ShoppingCart[choice]);
+                        ShoppingCart[choice].addItemCount();
                         System.out.println(names[choice] + " was added successfully!");
                     }
 
             }
             else if (options==1) {
                 System.out.println("Select Option by ID");
-                //@ assume itemList.length==names.length;
-                for(int i=0;i<itemList.length;i++){
+                //@ assume ShoppingCart.length==names.length;
+                for(int i=0;i<ShoppingCart.length;i++){
                     if(i<0){
                         throw new IllegalStateException("not valid");
                     }
-                    System.out.println("ID: "+itemList[i].id+ ", Name: "+names[i]+", Cost: "+itemList[i].cost);
+                    System.out.println("ID: "+ShoppingCart[i].id+ ", Name: "+names[i]+", Cost: "+ShoppingCart[i].cost);
                 }
                 choice = scan.nextInt();
-                if(choice<0||choice>=itemList.length){
+                if(choice<0||choice>=ShoppingCart.length){
                     throw new IllegalStateException("Not a valid option");
                 }
-                if(itemList[choice].getItemCount()<=0){
+                if(ShoppingCart[choice].getItemCount()<=0){
                     throw new IllegalStateException("Cannot remove an item thats not in your cart");
                 }
-                removeItemCostToTotalCost(itemList[choice]);
-                itemList[choice].removeItemCount();
+                removeItemCostToTotalCost(ShoppingCart[choice]);
+                ShoppingCart[choice].removeItemCount();
                 System.out.println(names[choice] + " was removed successfully!");
             } else if(options==2){
                 System.out.println("\nYour Cart:");
-                //@ assume itemList.length==names.length;
-                for(int i=0;i<itemList.length;i++){
+                //@ assume ShoppingCart.length==names.length;
+                for(int i=0;i<ShoppingCart.length;i++){
                     if(i<0){
                         throw new IllegalStateException("not valid");
                     }
-                    if(itemList[i].getItemCount()<=0){
+                    if(ShoppingCart[i].getItemCount()<=0){
                         continue;
                     }
-                    System.out.println("\tName: "+names[i]+", Cost: "+itemList[i].cost + ", Quantity: "+ itemList[i].getItemCount());
+                    System.out.println("\tName: "+names[i]+", Cost: "+ShoppingCart[i].cost + ", Quantity: "+ ShoppingCart[i].getItemCount());
                 }
                 System.out.println("\nTotal:\n\tTotal Cost: $"+totalCost+ "\n\tItems In Cart: "+ totalItemCount+"\n");
 
@@ -381,15 +401,15 @@ public class item {
 /*
             else if(options==3){
                 System.out.println("\nYour Receipt:");
-                //@ assume itemList.length==names.length;
-                for(int i=0;i<itemList.length;i++){
+                //@ assume ShoppingCart.length==names.length;
+                for(int i=0;i<ShoppingCart.length;i++){
                     if(i<0){
                         throw new IllegalStateException("not valid");
                     }
-                    if(itemList[i].getItemCount()<=0){
+                    if(ShoppingCart[i].getItemCount()<=0){
                         continue;
                     }
-                    System.out.println("\tName: "+names[i]+", Cost: "+itemList[i].cost + ", Quantity: "+ itemList[i].getItemCount());
+                    System.out.println("\tName: "+names[i]+", Cost: "+ShoppingCart[i].cost + ", Quantity: "+ ShoppingCart[i].getItemCount());
                 }
                 System.out.println("\nTotal:\n\tTotal Cost: $"+totalCost+ "\n\tItems In Cart: "+ totalItemCount+"\n");
                 break;
